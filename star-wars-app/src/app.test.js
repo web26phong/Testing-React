@@ -1,32 +1,44 @@
 import React from "react";
 import {render, fireEvent, wait} from "@testing-library/react";
 import StarWarsCharacters from "./components/StarWarsCharacters";
-import {getData as mockGetData} from "./api";
+import {getData} from "./api";
 
-jest.mock('./api/');
+jest.mock("./api");
 
-test("Buttons rendered and working", async ()=>{
-    mockGetData.mockResolvedValue({
-        next: "next link",
-        previous: "previous link",
-        results: [
-            {name: "name1", url: "url1"}, 
-            {name: "name2", url: "url2"}
-        ]
-    })
+const initialData = {
+    next: "next url",
+    previous: null,
+    results: [{name: "name1", url: "urlOne"}]
+}
 
+const secondData = {
+    next: "next2 url",
+    previous: "previous url",
+    results: [{name: "name2", url: "urlTwo"}]
+}
+
+test("Previous and Next buttons are rendered", async ()=>{
+    getData.mockResolvedValueOnce(initialData)
     const {getByText} = render(<StarWarsCharacters />);
-    const previousButton = getByText(/previous/i);
-    const nextButton = getByText(/next/i);
 
-    
-    // const url = initialData.next;
+    const previousButton = getByText(/Previous/i);
+    const nextButton = getByText(/Next/i);
+    expect(getData).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(previousButton);
-    fireEvent.click(nextButton);
-    expect(mockGetData).toHaveBeenCalledTimes(1);
-    expect(mockGetData).toHaveBeenCalledWith("https://swapi.co/api/people");
+    await wait(()=> expect(getByText(/name1/i)))
 
-    await wait(()=> expect(getByText(/name1/i)));
-    getByText(/name1/i);
+    getData.mockResolvedValueOnce(secondData); //give values for when next button clicked
+    await wait(()=> fireEvent.click(nextButton)); //click next button
+
+    await wait(()=> expect(getByText(/name2/i)))
+    getByText(/name2/i);
+    expect(getData).toHaveBeenCalledTimes(2);
+
+    getData.mockResolvedValueOnce(initialData); //give values for when prev button clicked
+    await wait(()=> fireEvent.click(previousButton)) //click previous button
+
+    await wait(()=> expect(getByText(/name1/i)))
+    getByText(/name1/i)
+
+    expect(getData).toHaveBeenCalledTimes(3);
 })
